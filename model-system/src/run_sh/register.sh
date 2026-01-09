@@ -25,8 +25,8 @@ export PYTHONPATH="$PROJECT_ROOT"
 PYTHON_SCRIPT="$PROJECT_ROOT/src/scripts/register_model.py"
 CONFIG_PATH="$PROJECT_ROOT/src/config/config.yaml"
 
-RUN_ID="20c0e794e88f41ab9fe3685a06c54874"
-MODEL_NAME="model"
+RUN_ID="43d4c10fb787422ebcdacc524c1f2258"
+MODEL_NAME="model_xgboost"
 DESCRIPTION="XGBoost model for customer churn prediction"
 
 echo "Registering model from run: $RUN_ID"
