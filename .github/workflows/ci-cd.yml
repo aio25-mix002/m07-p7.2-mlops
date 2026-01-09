@@ -65,6 +65,9 @@ jobs:
           RUN_ID=$(grep -oE 'runs/[a-f0-9]+' train.log | head -n1 | cut -d/ -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
+      - name: Debug RUN_ID
+        run: echo "The RUN_ID is ${{ env.RUN_ID }}"
+
       - name: Run Evaluation
         shell: bash
         working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system

@@ -39,5 +39,3 @@ python "$PYTHON_SCRIPT" \
     --config "$CONFIG_PATH" \
     --training-data-path "$TRAINING_DATA_PATH" \
     --run-name "$RUN_NAME"
-
-echo "Training script completed."
