@@ -24,6 +24,11 @@ jobs:
         run: |
           cd /home/mlops/Repository/aio2025-mlops-project01/data-pipeline-mlops/churn_feature_store/churn_features/feature_repo/
       
+      - name: Verify Current Path
+        shell: bash
+        run: |
+          pwd
+
       - name: Apply Feast Feature Definitions
         shell: bash
         run: |
