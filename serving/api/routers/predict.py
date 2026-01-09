@@ -11,12 +11,17 @@ from load_model import load_model
 import logging
 import pandas as pd
 from typing import List
+from dotenv import load_dotenv
+load_dotenv()
 
 router = APIRouter(prefix="/predict", tags=["Prediction"])
 logger = logging.getLogger(__name__)
 
 # Model will be loaded lazily on first use
 _model = None
+MODEL_URI = os.getenv("MODEL_URI")
+if MODEL_URI is None:
+    raise ValueError("MODEL_URI environment variable not set")
 
 
 def get_model():
@@ -24,7 +29,7 @@ def get_model():
     global _model
     if _model is None:
         logger.info("Loading model from MLflow...")
-        _model = load_model(model_uri="runs:/c4b92406479d490993622563a35a47f7/xgboost_churn")
+        _model = load_model(model_uri=MODEL_URI)
         logger.info("Model loaded successfully")
     return _model
 
