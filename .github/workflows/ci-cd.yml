@@ -61,7 +61,7 @@ jobs:
         shell: bash
         working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
         run: |
-          conda run -n mlops_2026 bash ./train.sh | tee train.log
+          conda run -n mlops_2026 bash ./src/run_sh/train.sh | tee train.log
           RUN_ID=$(grep "Run ID: " train.log | cut -d= -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
 
