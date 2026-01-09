@@ -1,0 +1,97 @@
+name: CICD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  feast:
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Activate conda environment
+        shell: bash
+        run: |
+          source /home/mlops/miniconda3/bin/activate
+          conda activate churn_mlops
+
+      - name: Go to feature repo directory
+        shell: bash
+        run: |
+          cd /home/mlops/Repository/aio2025-mlops-project01/data-pipeline-mlops/churn_feature_store/churn_features/feature_repo/
+      
+      - name: Apply Feast Feature Definitions
+        shell: bash
+        run: |
+          feast apply
+
+      - name: Materialize Feast Features
+        shell: bash
+        run: |
+          feast materialize-incremental $(date -u +"%Y-%m-%dT%H:%M:%S")
+
+
+  training:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Activate conda environment
+        shell: bash
+        run: |
+          source /home/mlops/miniconda3/bin/activate
+          conda activate churn_mlops
+
+      - name: Go to run_sh directory
+        shell: bash
+        run: |
+          cd /home/mlops/Repository/aio2025-mlops-project01/model-system/src/run_sh
+
+      - name: Run Training
+        shell: bash
+        run: |
+          bash ./train.sh
+
+      - name: Run Evaluation
+        shell: bash
+        run: |
+          bash ./eval.sh
+
+      - name: Run Registration
+        shell: bash
+        run: |
+          bash ./register_model.sh
+
+      # - name: Update Model Version Alias
+      #   shell: bash
+      #   run: |
+      #     bash ./set_model_alias.sh
+
+      # - name: Promote to Champion
+      #   shell: bash
+      #   run: |
+      #     bash ./promote_model.sh
+
+  serving: 
+    runs-on: [self-hosted, linux]
+    needs: training
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Activate conda environment
+        shell: bash
+        run: |
+          source /home/mlops/miniconda3/bin/activate
+          conda activate churn_mlops
+
+      - name: Go to run_sh directory
+        shell: bash
+        run: |
+          cd /home/mlops/
