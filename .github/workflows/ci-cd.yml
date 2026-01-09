@@ -37,6 +37,7 @@ jobs:
 
   training:
     runs-on: [self-hosted, linux]
+    needs: feast
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
