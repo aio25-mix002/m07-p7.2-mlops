@@ -53,42 +53,43 @@ jobs:
 
       - name: Verify Current Path
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system/src/run_sh
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline/src/run_sh
         run: |
           pwd
 
       - name: Run Training
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
         run: |
           conda run -n mlops_2026 bash ./src/run_sh/train.sh | tee train.log
           RUN_ID=$(grep -oE 'runs/[a-f0-9]+' train.log | head -n1 | cut -d/ -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+          echo "MODEL_URI=runs:${RUN_ID}/xgboost_churn" >> $GITHUB_ENV
 
       - name: Debug RUN_ID
         run: echo "The RUN_ID is ${{ env.RUN_ID }}"
 
       - name: Run Evaluation
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
         run: |
           conda run -n mlops_2026 bash ./src/run_sh/eval.sh --run-id ${{ env.RUN_ID }} | tee eval.log
 
       - name: Run Registration
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
         run: |
           conda run -n mlops_2026 bash ./src/run_sh/register.sh --run-id ${{ env.RUN_ID }} | tee register.log
 
       - name: Update Model Version Alias
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
         run: |
           conda run -n mlops_2026 bash ./src/run_sh/set_model_alias.sh
 
       - name: Promote to Champion
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model-system
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
         run: |
           conda run -n mlops_2026 bash ./src/run_sh/promote.sh
 
@@ -97,18 +98,9 @@ jobs:
     needs: training
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Activate conda environment
-        shell: bash
-        run: |
-          source /home/mlops/miniconda3/bin/activate
-          conda activate mlops_2026_fix
-      
       - name: Start API Service
         shell: bash
-        working-directory: /home/mlops/Repository/aio2025-mlops-project01/serving
+        working-directory: /home/mlops/Repository/aio2025-mlops-project01/serving_pipeline
         run: |
           docker compose up -d --build
         
