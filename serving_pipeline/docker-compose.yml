@@ -1,8 +1,6 @@
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/aio2025-mlops-project01/churn-prediction-api:latest
     container_name: churn-prediction-api
     ports:
       - "8000:8000"
@@ -27,9 +25,7 @@ services:
       - aio-network
 
   ui:
-    build:
-      context: .
-      dockerfile: Dockerfile.ui
+    image: ghcr.io/aio2025-mlops-project01/churn-prediction-ui:latest
     container_name: churn-prediction-ui
     restart: unless-stopped
     ports:
