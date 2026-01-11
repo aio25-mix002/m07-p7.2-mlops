@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Literal
-
+from typing import Optional
 
 class ChurnInput(BaseModel):
     """Input schema for churn prediction"""
@@ -44,3 +44,17 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     timestamp: str
 
+class DriftMetricsResponse(BaseModel):
+    """Response schema for drift metrics"""
+    overall_drift_score: float = Field(..., description="Overall drift score (0-1)")
+    drift_status: str = Field(..., description="Drift status: LOW/MEDIUM/HIGH")
+    dataset_drift: Optional[bool] = Field(None, description="Whether dataset drift detected")
+    number_of_drifted_features: Optional[int] = Field(None, description="Number of features with drift")
+    total_features: Optional[int] = Field(None, description="Total number of features")
+    drift_by_feature: Optional[dict] = Field(None, description="Drift details by feature")
+    target_drift: Optional[bool] = Field(None, description="Whether target drift detected")
+    prediction_drift: Optional[bool] = Field(None, description="Whether prediction drift detected")
+    performance: Optional[dict] = Field(None, description="Performance metrics comparison")
+    reference_data_size: int = Field(..., description="Size of reference dataset")
+    current_data_size: int = Field(..., description="Size of current dataset")
+    timestamp: str = Field(..., description="Timestamp of drift check")

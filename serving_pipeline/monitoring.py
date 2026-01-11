@@ -1,11 +1,3 @@
-"""
-Drift monitoring utilities using Evidently AI
-Compatible with Evidently 0.4.x
-"""
-# Lazy import - không import evidently ở top level để tránh xung đột Pydantic v1/v2
-# from evidently.report import Report
-# from evidently.metric_preset import DataDriftPreset, ClassificationPreset
-# from evidently import ColumnMapping
 import pandas as pd
 from typing import Dict, Any, Optional
 import os
@@ -33,7 +25,7 @@ def generate_drift_report(
     Returns:
         Dictionary with drift metrics
     """
-    # Lazy import - chỉ import khi function được gọi
+    # Lazy import 
     try:
         from evidently.report import Report
         from evidently.metric_preset import DataDriftPreset, ClassificationPreset
@@ -149,14 +141,14 @@ def generate_drift_report(
                     # Overall dataset drift
                     if 'dataset_drift' in result:
                         metrics_dict['dataset_drift'] = result['dataset_drift']
-                        logger.info(f"  ✓ dataset_drift: {result['dataset_drift']}")
+                        logger.info(f"   dataset_drift: {result['dataset_drift']}")
                     else:
-                        logger.warning("  ✗ 'dataset_drift' not found in result")
+                        logger.warning("   'dataset_drift' not found in result")
                     
                     # Drift share (alternative to dataset_drift in some versions)
                     if 'drift_share' in result:
                         metrics_dict['drift_share'] = result['drift_share']
-                        logger.info(f"  ✓ drift_share: {result['drift_share']}")
+                        logger.info(f"   drift_share: {result['drift_share']}")
                     
                     # Drift by feature
                     if 'drift_by_columns' in result:
@@ -168,22 +160,22 @@ def generate_drift_report(
                                 'statistical_test': col_result.get('stattest_name', col_result.get('stattest', 'unknown'))
                             }
                         metrics_dict['drift_by_feature'] = drift_by_columns
-                        logger.info(f"  ✓ drift_by_columns: {len(drift_by_columns)} features")
+                        logger.info(f"   drift_by_columns: {len(drift_by_columns)} features")
                     else:
-                        logger.warning("  ✗ 'drift_by_columns' not found in result")
+                        logger.warning("   'drift_by_columns' not found in result")
                     
                     # Number of drifted features
                     if 'number_of_drifted_columns' in result:
                         metrics_dict['number_of_drifted_features'] = result['number_of_drifted_columns']
-                        logger.info(f"  ✓ number_of_drifted_columns: {result['number_of_drifted_columns']}")
+                        logger.info(f"   number_of_drifted_columns: {result['number_of_drifted_columns']}")
                     else:
-                        logger.warning("  ✗ 'number_of_drifted_columns' not found")
+                        logger.warning("   'number_of_drifted_columns' not found")
                     
                     if 'number_of_columns' in result:
                         metrics_dict['total_features'] = result['number_of_columns']
-                        logger.info(f"  ✓ number_of_columns: {result['number_of_columns']}")
+                        logger.info(f"   number_of_columns: {result['number_of_columns']}")
                     else:
-                        logger.warning("  ✗ 'number_of_columns' not found")
+                        logger.warning("   'number_of_columns' not found")
                 
                 # ===== CLASSIFICATION METRICS =====
                 elif 'Classification' in metric_type or 'classification' in metric_type.lower():
@@ -192,12 +184,12 @@ def generate_drift_report(
                     # Target drift
                     if 'target_drift' in result:
                         metrics_dict['target_drift'] = result['target_drift']
-                        logger.info(f"  ✓ target_drift: {result['target_drift']}")
+                        logger.info(f"   target_drift: {result['target_drift']}")
                     
                     # Prediction drift
                     if 'prediction_drift' in result:
                         metrics_dict['prediction_drift'] = result['prediction_drift']
-                        logger.info(f"  ✓ prediction_drift: {result['prediction_drift']}")
+                        logger.info(f"  prediction_drift: {result['prediction_drift']}")
                     
                     # Performance metrics
                     if 'reference' in result and 'current' in result:
@@ -218,7 +210,7 @@ def generate_drift_report(
                                 'f1': curr_metrics.get('f1', 0)
                             }
                         }
-                        logger.info(f"  ✓ performance metrics extracted")
+                        logger.info(f"   performance metrics extracted")
         else:
             logger.warning("No 'metrics' key found in report_dict")
             
