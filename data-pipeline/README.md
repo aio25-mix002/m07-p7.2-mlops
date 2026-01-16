@@ -79,8 +79,8 @@ dvc init
 First, create an S3 bucket on AWS Console (e.g., `churn-mlops-dvc`), then configure DVC:
 
 ```bash
-dvc remote add -d s3remote s3://churn-mlops-dvc/data
-dvc remote modify s3remote region ap-southeast-1
+dvc remote add -d s3remote s3://churn-project-group-conquer008/data
+dvc remote modify s3remote region us-east-1
 ```
 
 Commit remote configuration to Git:
