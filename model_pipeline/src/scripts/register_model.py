@@ -25,6 +25,7 @@ def main():
     register_parser = subparsers.add_parser("register", help="Register a model")
     register_parser.add_argument("--run-id", required=True, help="MLflow run ID")
     register_parser.add_argument("--model-name", required=True, help="Model name")
+    register_parser.add_argument("--artifact-path", default="model", help="Artifact path where model was saved (default: model)")
     register_parser.add_argument("--description", help="Model description")
 
     alias_parser = subparsers.add_parser('set-alias', help='Set model alias')
@@ -60,7 +61,8 @@ def main():
 
     if args.command == "register":
         logger.info(f"Register model from run: {args.run_id=}")
-        model_uri = f"runs:/{args.run_id}/model"
+        # model_uri = f"runs:/{args.run_id}/model"
+        model_uri = f"runs:/{args.run_id}/{args.artifact_path}"
 
         model_version = registry.register_model(
             model_uri=model_uri,

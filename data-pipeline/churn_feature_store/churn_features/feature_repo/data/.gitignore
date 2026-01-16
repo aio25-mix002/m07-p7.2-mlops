@@ -1,4 +1,3 @@
-/processed_churn_data.parquet
 ./registry.db
+/processed_churn_data.parquet
 /test.parquet
-/train.parquet

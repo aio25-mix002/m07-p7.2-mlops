@@ -1,0 +1,5 @@
+outs:
+- md5: 493603f944c5baa06d2d76d5d870f2e9
+  size: 1890
+  hash: md5
+  path: registry.db

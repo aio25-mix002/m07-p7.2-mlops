@@ -1,323 +1,411 @@
 # MLflow Model System - Customer Churn Prediction
 
-A production-ready MLOps system for training, evaluating, and managing XGBoost models for customer churn prediction using MLflow.
+A production-ready MLOps system for training, evaluating, and managing ML models for customer churn prediction using MLflow.
 
 ## Overview
 
 This project implements a complete MLOps pipeline for customer churn prediction using:
 
 - **MLflow** for experiment tracking, model registry, and artifact management
-- **XGBoost** for high-performance gradient boosting classification
+- **Multiple ML Models** (XGBoost, Logistic Regression, Random Forest, Decision Tree)
 - **MinIO** for S3-compatible artifact storage
-- **Docker** for containerized MLflow server
-- **SHAP** for model explainability
+- **Kubernetes** for MLflow deployment
+- **Feast** for feature store integration
 
-The system provides end-to-end functionality from data preprocessing to model deployment with full tracking and versioning capabilities.
+## Project Structure
 
-## Features
-### Experiment Tracking
-- Automatic logging of parameters, metrics, and artifacts
-- Support for nested runs and experiment organization
-- Integration with MLflow UI for visualization
-
-### Model Training
-- XGBoost binary classification with GPU support
-- Configurable hyperparameters via YAML
-- Automatic feature importance logging
-- Early stopping and validation monitoring
-
-### Model Evaluation
-- Comprehensive metrics (AUC, log loss, accuracy)
-- SHAP explainability integration
-- Model comparison against baseline
-- Threshold validation for deployment gates
-
-### Model Registry
-- Version control for trained models
-- Alias management (staging, champion, production)
-- Model promotion workflows
-- Complete model lifecycle tracking
-
-### Infrastructure
-- Dockerized MLflow tracking server
-- MinIO for artifact storage (S3-compatible)
-- PostgreSQL backend for metadata
-- Production-ready configuration
-
-## 📁 Project Structure
-
-```
+```plaintext
 model_pipeline/
-├── docker-compose.yaml          # MLflow infrastructure setup
-├── README.md                    # This file
-├── notebook/
-│   └── test_end_to_end.ipynb   # End-to-end testing notebook
+├── README.md
 └── src/
     ├── config/
-    │   └── config.yaml          # Model and MLflow configuration
-    ├── data/
-    │   ├── train.csv            # Training dataset
-    │   ├── test.csv             # Testing dataset
-    │   └── *.ipynb              # Data preprocessing notebooks
+    │   ├── xgboost.yaml              # XGBoost model configuration
+    │   ├── logistic_regression.yaml  # Logistic Regression configuration
+    │   ├── random_forest.yaml        # Random Forest configuration
+    │   └── decision_tree.yaml        # Decision Tree configuration
     ├── mlflow_utils/
-    │   ├── experiment_tracker.py    # MLflow experiment management
-    │   └── model_registry.py        # Model registry operations
+    │   ├── experiment_tracker.py     # MLflow experiment management
+    │   └── model_registry.py         # Model registry operations
     ├── model/
-    │   ├── xgboost_trainer.py      # XGBoost training pipeline
-    │   └── evaluator.py            # Model evaluation logic
+    │   ├── xgboost_trainer.py        # Generic trainer for all models
+    │   └── evaluator.py              # Model evaluation logic
     ├── scripts/
-    │   ├── train.py                # Training script
-    │   ├── eval.py                 # Evaluation script
-    │   └── register_model.py       # Model registry CLI
+    │   ├── train.py                  # Training script
+    │   ├── eval.py                   # Evaluation script
+    │   ├── register_model.py         # Model registry CLI
+    │   └── compare_models.py         # Model comparison script
     ├── run_sh/
-    │   ├── train.sh                # Training execution script
-    │   ├── eval.sh                 # Evaluation execution script
-    │   ├── register_model.sh       # Model registration script
-    │   ├── set_model_alias.sh      # Set model alias
-    │   ├── promote_model.sh        # Promote model to production
-    │   ├── list_models.sh          # List registered models
-    │   └── model_info.sh           # Get model information
+    │   ├── train.sh                  # Training execution script
+    │   ├── eval.sh                   # Evaluation execution script
+    │   ├── register.sh               # Model registration script
+    │   ├── compare.sh                # Model comparison script
+    │   ├── set_model_alias.sh        # Set model alias
+    │   ├── promote.sh                # Promote model to champion
+    │   ├── list_model.sh             # List registered models
+    │   └── model_info.sh             # Get model information
+    ├── tests/
+    │   ├── unit/
+    │   └── integration/
     └── utility/
-        └── helper.py               # Utility functions
+        └── helper.py                 # Utility functions
 ```
 
 ## Prerequisites
 
 - **Python**: 3.10 or higher
-- **Docker & Docker Compose**: For MLflow infrastructure
-- **CUDA** (optional): For GPU-accelerated training
-- **Git**: For version control
+- **kubectl**: For accessing MLflow on Kubernetes
+- **CUDA** (optional): For GPU-accelerated XGBoost training
 
+## Accessing MLflow UI
 
+MLflow is deployed on Kubernetes. To access the UI:
 
-## ⚙️ Configuration
+```bash
+# Run the port-forward script
+./infra/k8s/access-mlflow.sh
+```
 
-### Main Configuration File: `src/config/config.yaml`
+This will forward the MLflow service to `http://localhost:5000`. Press `Ctrl+C` to stop.
+
+## Configuration
+
+### Config Files
+
+Each model type has its own configuration file in `src/config/`:
+
+| Config File | Model Type | Description |
+|-------------|------------|-------------|
+| `xgboost.yaml` | XGBoost | Gradient boosting classifier |
+| `logistic_regression.yaml` | Logistic Regression | Linear classifier |
+| `random_forest.yaml` | Random Forest | Ensemble tree classifier |
+| `decision_tree.yaml` | Decision Tree | Single tree classifier |
+
+### Example Config Structure
 
 ```yaml
 mlflow:
   tracking_uri: "http://localhost:5000"
   experiment_name: "test_churn_prediction_v0.1"
   artifact_location: "s3://mlflow/"
-  registry_uri: "http://localhost:5000"
   tags:
     task: "churn_prediction"
     purpose: "test"
 
 model:
   name: "xgboost_churn"
-  version: "0.1.0"
   type: "classifier"
+  model_type: "xgboost"  # or "logistic_regression", "random_forest", "decision_tree"
   train_test_split: 0.2
   random_state: 42
-  
-  xgboost:
-    booster: "gbtree"
-    device: "cuda"  # or "cpu"
-    max_depth: 6
-    eta: 0.1
-    objective: "binary:logistic"
-    eval_metric: ["auc", "logloss", "error@0.5"]
-    # ... more parameters
+  parameters:
+    # Model-specific parameters
 
 evaluation:
-  shap:
-    enabled: true
-    explainer_type: "exact"
-    max_samples: 100
-  
   thresholds:
     accuracy: 0.85
     auc: 0.80
 
 features:
-  target_column: "Churn"
+  target_column: churned
   training_features:
-    - Age
-    - Tenure
-    - Usage Frequency
+    - age
+    - gender
+    - tenure_months
     # ... more features
 ```
 
-### Environment Variables
+## Quick Start
 
-The system uses these environment variables (set in training/eval scripts):
+### 1. Access MLflow UI
 
 ```bash
-export AWS_ACCESS_KEY_ID="minio"
-export AWS_SECRET_ACCESS_KEY="minio123"
-export AWS_DEFAULT_REGION="us-east-1"
-export MLFLOW_S3_ENDPOINT_URL="http://localhost:9000"
+./infra/k8s/access-mlflow.sh
 ```
 
-## 🎬 Quick Start
-
-### 1. Train a Model
+### 2. Train a Model
 
 ```bash
-cd src/run_sh
-chmod +x *.sh
+cd model_pipeline/src/run_sh
 
-# Run training
+# Train with default config (logistic regression)
 ./train.sh
+
+# Train with specific config
+./train.sh --config ../config/xgboost.yaml
+
+# Train with custom run name
+./train.sh --config ../config/xgboost.yaml --run-name "xgboost_experiment_1"
 ```
 
-**Output**: You'll get a `run_id` (e.g., `20c0e794e88f41ab9fe3685a06c54874`)
+**train.sh Options:**
 
-### 2. Evaluate the Model
-
-```bash
-# Update RUN_ID in eval.sh with your run_id
-./eval.sh
+```plaintext
+--config PATH              Path to config YAML
+--training-data-path PATH  Path to training data
+--run-name NAME            Run name (default: autogenerated)
+--python-script PATH       Path to training script
+-h, --help                 Show help message
 ```
 
-### 3. Register the Model
+**Output**: The training script will output a `run_id` that you'll need for evaluation and registration.
+
+### 3. Evaluate the Model
 
 ```bash
-# Update RUN_ID in register_model.sh
-./register_model.sh
+# Evaluate using run ID from training
+./eval.sh --run-id <RUN_ID>
+
+# Evaluate with specific config
+./eval.sh --run-id <RUN_ID> --config ../config/xgboost.yaml
+
+# Disable threshold validation
+./eval.sh --run-id <RUN_ID> --no-validate-thresholds
 ```
 
-### 4. Promote to Production
+**eval.sh Options:**
+
+```plaintext
+--run-id RUN_ID                 MLflow run ID to evaluate (required)
+--config PATH                   Path to config YAML
+--eval-data-path PATH           Path to evaluation dataset
+--output-path-prediction PATH   Path to save predictions
+--no-validate-thresholds        Disable threshold validation
+-h, --help                      Show help message
+```
+
+### 4. Register the Model
 
 ```bash
-# Update VERSION in set_model_alias.sh
-./set_model_alias.sh
+# Register model from a training run
+./register.sh register --run-id <RUN_ID> --model-name churn-model
+
+# With description
+./register.sh register --run-id <RUN_ID> --model-name churn-model --description "XGBoost churn model v1"
+```
+
+**register.sh Commands:**
+
+```plaintext
+register    Register a model from an MLflow run
+set-alias   Set an alias for a model version
+promote     Promote a model to production
+list        List all registered models
+info        Get info about a model
+```
+
+**register.sh Options:**
+
+```plaintext
+--config PATH       Path to config YAML
+--run-id ID         MLflow run ID (for register)
+--model-name NAME   Model name
+--version VER       Model version (for set-alias, promote)
+--alias ALIAS       Alias: staging|champion|production (for set-alias)
+--description DESC  Model description (for register)
+```
+
+### 5. Set Model Alias
+
+```bash
+# Set staging alias
+./set_model_alias.sh --model-name churn-model --version 1 --alias staging
+
+# Set champion alias
+./set_model_alias.sh --model-name churn-model --version 1 --alias champion
+```
+
+### 6. Promote to Production
+
+```bash
+# Promote model from staging to champion
+./promote.sh --model-name churn-model --version 1
+```
+
+### 7. List and Inspect Models
+
+```bash
+# List all registered models
+./list_model.sh
+
+# Get detailed info about a model
+./model_info.sh
+```
+
+## Python Scripts Direct Usage
+
+### train.py
+
+```bash
+cd model_pipeline
+export PYTHONPATH=$(pwd)
+
+python src/scripts/train.py \
+  --config src/config/xgboost.yaml \
+  --training-data-path /path/to/train.parquet \
+  --experiment-name "my_experiment" \
+  --run-name "my_run"
+```
+
+**Arguments:**
+
+- `--config`: Path to config YAML file
+- `--training-data-path`: Path to training data (CSV or Parquet)
+- `--experiment-name`: MLflow experiment name (optional, uses config default)
+- `--run-name`: MLflow run name (optional)
+
+### eval.py
+
+```bash
+python src/scripts/eval.py \
+  --config src/config/xgboost.yaml \
+  --run-id <RUN_ID> \
+  --eval-data-path /path/to/test.parquet \
+  --validate-thresholds \
+  --output-path-prediction predictions.csv
+```
+
+**Arguments:**
+
+- `--config`: Path to config YAML file
+- `--run-id`: MLflow run ID to evaluate
+- `--model-uri`: Alternative to run-id, e.g., `models:/model_name@champion`
+- `--eval-data-path`: Path to evaluation data (CSV or Parquet)
+- `--validate-thresholds`: Validate metrics against configured thresholds
+- `--compare-baseline`: Baseline model URI to compare against
+- `--output-path-prediction`: Path to save predictions CSV
+
+### register_model.py
+
+```bash
+# Register a model
+python src/scripts/register_model.py --config src/config/config.yaml \
+  register \
+  --run-id <RUN_ID> \
+  --model-name churn-model \
+  --artifact-path model \
+  --description "My model"
+
+# Set alias
+python src/scripts/register_model.py --config src/config/config.yaml \
+  set-alias \
+  --model-name churn-model \
+  --version 1 \
+  --alias staging
 
 # Promote to champion
-./promote_model.sh
+python src/scripts/register_model.py --config src/config/config.yaml \
+  promote \
+  --model-name churn-model \
+  --version 1
+
+# List models
+python src/scripts/register_model.py --config src/config/config.yaml list
+
+# Get model info
+python src/scripts/register_model.py --config src/config/config.yaml \
+  info \
+  --model-name churn-model
 ```
 
-### 5. Use the Model
+## Model Registry Workflow
+
+```plaintext
+┌─────────────────┐
+│    Training     │  ./train.sh
+│  (Creates Run)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Evaluation    │  ./eval.sh --run-id <RUN_ID>
+│ (Validate Run)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Registration   │  ./register.sh register --run-id <RUN_ID> --model-name <NAME>
+│(Create Version) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│    Staging      │  ./set_model_alias.sh --alias staging
+│   (Testing)     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Production    │  ./promote.sh --model-name <NAME> --version <VER>
+│   (Champion)    │
+└─────────────────┘
+```
+
+## Loading Models
 
 ```python
 import mlflow
 
-# Load production model
-model = mlflow.pyfunc.load_model("models:/xgboost_churn_model@champion")
+# Load from run ID
+model = mlflow.pyfunc.load_model(f"runs:/{run_id}/model_name")
+
+# Load from registry by version
+model = mlflow.pyfunc.load_model("models:/churn-model/1")
+
+# Load from registry by alias
+model = mlflow.pyfunc.load_model("models:/churn-model@staging")
+model = mlflow.pyfunc.load_model("models:/churn-model@champion")
 
 # Make predictions
 predictions = model.predict(test_data)
 ```
 
-## 🔄 Model Registry Workflow
+## Environment Variables
 
-### Complete Lifecycle
+The scripts automatically set these environment variables for MinIO/S3 access:
 
-```
-┌─────────────┐
-│   Training  │  ./train.sh
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Evaluation │  ./eval.sh
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Registration│  ./register_model.sh
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   Staging   │  ./set_model_alias.sh (alias=staging)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Validation │  Additional testing
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Production │  ./promote_model.sh
-└─────────────┘
+```bash
+AWS_ACCESS_KEY_ID=minio
+AWS_SECRET_ACCESS_KEY=minio123
+AWS_DEFAULT_REGION=us-east-1
+MLFLOW_S3_ENDPOINT_URL=http://localhost:9000
 ```
 
-### Best Practices
+## Data Sources
 
-1. **Development Cycle**
-   ```bash
-   # Train multiple models
-   ./train.sh  # experiment-1
-   ./train.sh  # experiment-2
-   ./train.sh  # experiment-3
-   
-   # Evaluate all
-   ./eval.sh  # Update RUN_ID each time
-   
-   # Register best model
-   ./register_model.sh
-   ```
+Training and evaluation data is sourced from the Feast feature store:
 
-2. **Staging Validation**
-   ```bash
-   # Register and set to staging
-   ./register_model.sh
-   ./set_model_alias.sh  # alias=staging
-   
-   # Test in staging environment
-   # Run A/B tests
-   # Validate performance
-   
-   # Promote when ready
-   ./promote_model.sh
-   ```
+- **Training data**: `data-pipeline/churn_feature_store/churn_features/feature_repo/data/processed_churn_data.parquet`
+- **Test data**: `data-pipeline/churn_feature_store/churn_features/feature_repo/data/test.parquet`
 
-3. **Production Deployment**
-   ```bash
-   # Always compare against current champion
-   python src/scripts/eval.py \
-       --model-uri "models:/xgboost_churn_model@staging" \
-       --compare-baseline "models:/xgboost_churn_model@champion"
-   
-   # If improvement confirmed, promote
-   ./promote_model.sh
-   ```
+## Architecture
 
-## 🏗️ Architecture
-
-### System Components
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     MLflow UI (Port 5000)                │
-│                   Experiment Tracking & Registry         │
-└───────────────────────┬─────────────────────────────────┘
-                        │
-        ┌───────────────┼───────────────┐
-        │               │               │
-        ▼               ▼               ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  PostgreSQL  │ │    MinIO     │ │Training/Eval │
-│   Metadata   │ │  Artifacts   │ │   Scripts    │
-│   Storage    │ │  (S3-like)   │ │              │
-└──────────────┘ └──────────────┘ └──────────────┘
+```plaintext
+┌─────────────────────────────────────────────────────────────┐
+│                   MLflow UI (Port 5000)                     │
+│              Experiment Tracking & Model Registry           │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+            ┌───────────────┼───────────────┐
+            │               │               │
+            ▼               ▼               ▼
+┌──────────────────┐ ┌──────────────┐ ┌──────────────────┐
+│    PostgreSQL    │ │    MinIO     │ │  Training/Eval   │
+│    (Metadata)    │ │  (Artifacts) │ │    Scripts       │
+└──────────────────┘ └──────────────┘ └──────────────────┘
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │    Feast     │
+                    │ Feature Store│
+                    └──────────────┘
 ```
 
-### Data Flow
+## Module Overview
 
-```
-Input Data → Preprocessing → Training → Evaluation → Registration → Production
-    ↓            ↓              ↓           ↓            ↓             ↓
-  Raw CSV    Cleaned Data   XGBoost    Metrics     Model URI    Deployed Model
-                                       SHAP         Version
-```
-
-### Module Architecture
-
-```
-mlflow_utils/
-├── experiment_tracker.py   → Handles run lifecycle, logging
-└── model_registry.py       → Model versioning, aliases
-
-model/
-├── xgboost_trainer.py     → Training pipeline, feature engineering
-└── evaluator.py          → Evaluation metrics, SHAP
-
-scripts/
-├── train.py              → CLI for training
-├── eval.py               → CLI for evaluation
-└── register_model.py     → CLI for registry operations
-```
+| Module | Description |
+|--------|-------------|
+| `mlflow_utils/experiment_tracker.py` | Handles MLflow run lifecycle, logging params/metrics/artifacts |
+| `mlflow_utils/model_registry.py` | Model versioning, aliases, promotion |
+| `model/xgboost_trainer.py` | Generic trainer supporting multiple model types |
+| `model/evaluator.py` | Evaluation metrics, threshold validation |
+| `utility/helper.py` | Config loading and utility functions |

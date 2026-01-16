@@ -25,7 +25,8 @@ def prepare_data_for_feast(input_path, output_path="data/processed_churn_data.pa
     df['created_timestamp'] = current_time
     
     # Ensure customer_id is string
-    df['customer_id'] = df['CustomerID'].astype(str)
+    # df['customer_id'] = df['CustomerID'].astype(str)
+    df['customer_id'] = df['CustomerID'].astype(float).astype(int) ## Change
     
     # Map column names to Feast-compatible names
     column_mapping = {
