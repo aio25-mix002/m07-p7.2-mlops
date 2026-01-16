@@ -61,69 +61,6 @@ def map_schema_to_preprocessing(data: Dict[str, Any]) -> Dict[str, Any]:
             mapped_data[preprocess_key] = data[preprocess_key]
     
     return mapped_data
-
-
-# def preprocess_input(data: Dict[str, Any]) -> pd.DataFrame:
-#     """
-#     Preprocess single prediction input
-    
-#     Args:
-#         data: Dictionary with customer features (schema or preprocessing format)
-        
-#     Returns:
-#         Preprocessed DataFrame ready for model with correct feature names
-#     """
-#     # Map schema names to preprocessing names if needed
-#     if any(key[0].isupper() for key in data.keys()):  # Schema format detected
-#         data = map_schema_to_preprocessing(data)
-    
-#     # Convert to DataFrame
-#     df = pd.DataFrame([data])
-    
-#     # 1. Handle missing values for numerical features
-#     for col in NUMERICAL_FEATURES:
-#         if col in df.columns:
-#             df[col] = df[col].fillna(df[col].median() if not df[col].isna().all() else 0)
-    
-#     # 2. Encode categorical features to numerical (model expects numerical only)
-#     if 'gender' in df.columns:
-#         df['gender'] = df['gender'].map(GENDER_MAPPING).fillna(0)
-    
-#     if 'subscription_type' in df.columns:
-#         df['subscription_type'] = df['subscription_type'].map(SUBSCRIPTION_MAPPING).fillna(0)
-    
-#     if 'contract_length' in df.columns:
-#         df['contract_length'] = df['contract_length'].map(CONTRACT_MAPPING).fillna(0)
-    
-#     # 3. Create engineered features (matching model requirements)
-#     if 'total_spend' in df.columns and 'usage_frequency' in df.columns:
-#         df['spend_per_usage'] = df['total_spend'] / (df['usage_frequency'] + 1)
-    
-#     if 'support_calls' in df.columns and 'tenure_months' in df.columns:
-#         df['support_calls_per_tenure'] = df['support_calls'] / (df['tenure_months'] + 1)
-    
-#     # Calculate avg_monthly_spend = total_spend / tenure_months
-#     if 'total_spend' in df.columns and 'tenure_months' in df.columns:
-#         df['avg_monthly_spend'] = df['total_spend'] / (df['tenure_months'].replace(0, 1) + 1)
-    
-#     # 4. Select only features that model needs (in correct order)
-#     model_features = [
-#         'age', 'tenure_months', 'usage_frequency', 'support_calls', 
-#         'payment_delay_days', 'support_calls_per_tenure', 'total_spend', 
-#         'last_interaction_days', 'spend_per_usage', 'avg_monthly_spend'
-#     ]
-    
-#     # Ensure all model features exist (fill missing with 0)
-#     for feature in model_features:
-#         if feature not in df.columns:
-#             df[feature] = 0
-    
-#     # Select only model features (in exact order)
-#     df_final = df[model_features].copy()
-    
-#     return df_final
-
-
 def validate_input(data: Dict[str, Any]) -> tuple[bool, str]:
     """
     Validate input data (supports both schema and preprocessing formats)
@@ -184,44 +121,6 @@ def validate_input(data: Dict[str, Any]) -> tuple[bool, str]:
         return False, "contract_length must be 'Monthly', 'Quarterly', or 'Annual'"
     
     return True, ""
-
-
-# def preprocess_batch(df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Preprocess batch of data (for training/evaluation)
-    
-#     Args:
-#         df: DataFrame with customer features (using new column names)
-        
-#     Returns:
-#         Preprocessed DataFrame with one-hot encoding
-#     """
-#     df_processed = df.copy()
-    
-#     # 1. Handle missing values for numerical features
-#     for col in NUMERICAL_FEATURES:
-#         if col in df_processed.columns:
-#             df_processed[col] = df_processed[col].fillna(df_processed[col].median())
-    
-#     # 2. Create engineered features (matching model requirements)
-#     if 'spend_per_usage' not in df_processed.columns:
-#         if 'total_spend' in df_processed.columns and 'usage_frequency' in df_processed.columns:
-#             df_processed['spend_per_usage'] = df_processed['total_spend'] / (df_processed['usage_frequency'] + 1)
-    
-#     if 'support_calls_per_tenure' not in df_processed.columns:
-#         if 'support_calls' in df_processed.columns and 'tenure_months' in df_processed.columns:
-#             df_processed['support_calls_per_tenure'] = df_processed['support_calls'] / (df_processed['tenure_months'] + 1)
-    
-#     # Calculate avg_monthly_spend = total_spend / tenure_months
-#     if 'avg_monthly_spend' not in df_processed.columns:
-#         if 'total_spend' in df_processed.columns and 'tenure_months' in df_processed.columns:
-#             df_processed['avg_monthly_spend'] = df_processed['total_spend'] / (df_processed['tenure_months'].replace(0, 1) + 1)
-    
-#     # 3. One-hot encoding for categorical features (drop_first=True like notebook)
-#     df_encoded = pd.get_dummies(df_processed, columns=CATEGORICAL_FEATURES, drop_first=True)
-    
-#     return df_encoded
-
 
 def save_production_data(data: Dict[str, Any], prediction: int, 
                         production_file: str = None):
