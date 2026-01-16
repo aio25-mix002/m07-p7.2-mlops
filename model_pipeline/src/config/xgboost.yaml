@@ -1,0 +1,52 @@
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "test_churn_prediction_v0.1"
+  artifact_location: "s3://mlflow/"
+  registry_uri: "http://localhost:5000"
+  tags:
+    task: "churn_prediction"
+    purpose: "test"
+
+model:
+  name: "xgboost_churn"
+  version: "0.1.0"
+  type: "classifier"  # For MLflow evaluation (classifier/regressor)
+  model_type: "xgboost"  # For trainer model selection
+  train_test_split: 0.2
+  random_state: 42
+
+  # xgboost:
+  parameters:
+    booster: "gbtree"
+    device: "cuda"  # or "cpu"
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 100
+    objective: "binary:logistic"
+    # eval_metric: ["auc", "logloss", "error@0.5"]  # passed during fit, not constructor
+    random_state: 42
+    n_jobs: -1
+
+evaluation:
+  # shap:
+  #   enabled: true
+  #   explainer_type: "exact"
+  #   max_samples: 100
+
+  thresholds:
+    accuracy: 0.85
+    auc: 0.80
+
+features:
+  target_column: churned
+  training_features:
+    - age
+    - gender
+    - tenure_months
+    - usage_frequency
+    - support_calls
+    - payment_delay_days
+    - subscription_type
+    - contract_length
+    - total_spend
+    - last_interaction_days

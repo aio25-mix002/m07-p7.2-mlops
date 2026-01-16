@@ -41,7 +41,7 @@ services:
     container_name: aivn-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
     healthcheck:
@@ -80,7 +80,7 @@ services:
     container_name: dcgm-exporter
     restart: unless-stopped
     ports:
-      - "9400:9400"
+      - "9401:9400"
     deploy:
       resources:
         reservations:

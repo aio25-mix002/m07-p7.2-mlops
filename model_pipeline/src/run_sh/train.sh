@@ -36,7 +36,7 @@ TRAINING_DATA_PATH="$REPO_ROOT/data-pipeline/churn_feature_store/churn_features/
 
 TIMESTAMP="$(date +"%Y%m%d_%H%M%S")"
 RUN_NAME="baseline-logistic_regression_${TIMESTAMP}"
-
+ 
 # =====================
 # Parse arguments
 # =====================
