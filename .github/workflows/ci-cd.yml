@@ -71,6 +71,11 @@ jobs:
         working-directory: ./model_pipeline
         run: |
           conda run -n mlops_modeling pip install -r requirements.txt
+      - name: Restore files via DVC
+        shell: bash
+        working-directory: ./data-pipeline
+        run: |
+          conda run -n mlops_data dvc pull
       - name: Run Training
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
