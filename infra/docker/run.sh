@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICES=("mlflow" "kafka" "monitor" "airflow")
 
 # Abs path to .env file
-ENV_FILE="$SCRIPT_DIR/.env"
+ENV_FILE="$SCRIPT_DIR/.env.local"
 
 # Function to print colored messages
 print_message() {
