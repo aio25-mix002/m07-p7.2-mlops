@@ -21,23 +21,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create conda environment if it doesn't exist
-        shell: bash
-        run: |
-          if ! conda info --envs | grep 'mlops_data'; then
-            echo "Conda environment does not exist. Creating..."
-            conda create -n mlops_data python=3.11 -y
-          fi
-      - name: Activate conda environment
-        shell: bash
-        run: |
-          conda activate mlops_data
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: 3.11
+          auto-activate: true
+          activate-environment: mlops_data
 
       - name: Restore packages
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
         run: |
-          pip install -r requirements.txt
+          conda run -n mlops_data pip install -r requirements.txt
 
       - name: Apply Feast Feature Definitions
         shell: bash
