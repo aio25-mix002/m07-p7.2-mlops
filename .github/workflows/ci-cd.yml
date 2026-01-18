@@ -31,7 +31,7 @@ jobs:
 
       - name: Restore packages
         shell: bash
-        working-directory: ${{ env.FEAST_REPO_PATH }}
+        working-directory: ./data-pipeline
         run: |
           conda run -n mlops_data pip install -r requirements.txt
 
@@ -54,23 +54,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create conda environment if it doesn't exist
-        shell: bash
-        run: |
-          if ! conda info --envs | grep 'mlops_modeling'; then
-            echo "Conda environment does not exist. Creating..."
-            conda create -n mlops_modeling python=3.11 -y
-          fi
-      - name: Activate conda environment
-        shell: bash
-        run: |
-          conda activate mlops_modeling
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: 3.11
+          auto-activate: true
+          activate-environment: mlops_modeling
       
       - name: Restore packages
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}
+        working-directory: ./model_pipeline
         run: |
-          pip install -r requirements.txt
+          conda run -n mlops_modeling pip install -r requirements.txt
       - name: Run Training
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
