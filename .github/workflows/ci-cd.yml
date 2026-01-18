@@ -70,7 +70,7 @@ jobs:
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_ENDPOINT_URL_S3=${{ vars.AWS_ENDPOINT_URL_S3 }}" >> $GITHUB_ENV
+          echo "MLFLOW_S3_ENDPOINT_URL=${{ vars.AWS_ENDPOINT_URL_S3 }}" >> $GITHUB_ENV
 
       - name: Restore packages
         shell: bash
