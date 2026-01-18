@@ -78,9 +78,9 @@ jobs:
           conda run -n mlops_data dvc pull
       - name: Run Training
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./train.sh | tee train.log
+          conda run -n mlops_modeling bash ./src/run_sh/train.sh --config ./src/config/xgboost.yaml | tee train.log
           RUN_ID=$(grep -oE 'runs/[a-f0-9]+' train.log | head -n1 | cut -d/ -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "MODEL_URI=runs:${RUN_ID}/xgboost_churn" >> $GITHUB_ENV
@@ -90,27 +90,27 @@ jobs:
 
       - name: Run Evaluation
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./eval.sh --run-id ${{ env.RUN_ID }} | tee eval.log
+          conda run -n mlops_modeling bash ./src/run_sh/eval.sh --config ./src/config/xgboost.yaml --run-id ${{ env.RUN_ID }} | tee eval.log
 
       - name: Run Registration
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./register.sh --run-id ${{ env.RUN_ID }} | tee register.log
+          conda run -n mlops_modeling bash ./src/run_sh/register.sh --config ./src/config/xgboost.yaml --run-id ${{ env.RUN_ID }} | tee register.log
 
       - name: Update Model Version Alias
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./set_model_alias.sh
+          conda run -n mlops_modeling bash ./src/run_sh/set_model_alias.sh --config ./src/config/xgboost.yaml
 
       - name: Promote to Champion
         shell: bash
-        working-directory: ${{ env.TRAINING_REPO_PATH }}/src/run_sh
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./promote.sh
+          conda run -n mlops_modeling bash ./src/run_sh/promote.sh --config ./src/config/xgboost.yaml
 
   serving:
     runs-on: [self-hosted, linux]
