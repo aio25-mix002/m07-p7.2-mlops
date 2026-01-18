@@ -34,7 +34,11 @@ jobs:
         working-directory: ./data-pipeline
         run: |
           conda run -n mlops_data pip install -r requirements.txt
-
+      - name: Restore files via DVC
+        shell: bash
+        working-directory: ./data-pipeline
+        run: |
+          conda run -n mlops_data dvc pull
       - name: Apply Feast Feature Definitions
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
