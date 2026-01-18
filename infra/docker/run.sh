@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICES=("mlflow" "kafka" "monitor" "airflow")
 
 # Abs path to .env file
-ENV_FILE="$SCRIPT_DIR/.env"
+ENV_FILE="$SCRIPT_DIR/.env.local"
 
 # Function to print colored messages
 print_message() {
@@ -37,7 +37,7 @@ start_services() {
         if [ -d "$SCRIPT_DIR/$service" ] && [ -f "$SCRIPT_DIR/$service/docker-compose.yaml" ]; then
             print_message "$BLUE" "Starting $service..."
             cd "$SCRIPT_DIR/$service"
-            docker compose --env-file ".env" --env-file "$ENV_FILE" up -d  --remove-orphans 
+            docker compose --env-file "$ENV_FILE" up -d  --remove-orphans 
             echo ""
         else
             print_message "$YELLOW" "Warning: $service directory or docker-compose.yaml not found"
