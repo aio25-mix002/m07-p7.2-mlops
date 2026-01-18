@@ -39,7 +39,7 @@ services:
     networks:
       - aio-network
     env_file:
-      - .env
+      - .env.local
     entrypoint: >
       /bin/sh -c "
       /tmp/wait-for-it.sh minio:9000 &&
