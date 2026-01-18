@@ -42,6 +42,12 @@ docker network create aio-network
 
 This network is used by MLflow and monitoring services to communicate.
 
+**If we use WSL**
+
+```
+sudo mount --make-shared /
+```
+
 ## Services
 
 ### 🔬 MLflow Stack
@@ -361,7 +367,8 @@ After starting the services, access them at:
      ```bash
      curl http://localhost:3100/ready
      ```
-
+NOTE: It's using loki logging driver, however this plugin doesn't work with windows ?
+https://grafana.com/docs/loki/latest/send-data/docker-driver/
 ### Resource Issues
 
 If services are consuming too many resources:

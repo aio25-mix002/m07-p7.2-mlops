@@ -2,17 +2,16 @@ name: CICD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-
 
 env:
   REGISTRY: ghcr.io
-  REF_REPO: thuannan/aio2025-mlops-project01
+  REF_REPO: ${{ github.repository }}
   DOCKER_BUILDKIT: 1
-  FEAST_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/data-pipeline/churn_feature_store/churn_features/feature_repo
-  TRAINING_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
-  SERVING_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/serving_pipeline
+  FEAST_REPO_PATH: ./data-pipeline/churn_feature_store/churn_features/feature_repo
+  TRAINING_REPO_PATH: ./model_pipeline
+  SERVING_REPO_PATH: ./serving_pipeline
 
 jobs:
   feast:
@@ -22,24 +21,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test activate conda environment
+      - name: Create conda environment if it doesn't exist
         shell: bash
         run: |
-          source /home/mlops/miniconda3/bin/activate
-          conda activate churn_mlops
+          if ! conda info --envs | grep 'mlops_data'; then
+            echo "Conda environment does not exist. Creating..."
+            conda create -n mlops_data python=3.11 -y
+          fi
+      - name: Activate conda environment
+        shell: bash
+        run: |
+          conda activate mlops_data
+
+      - name: Restore packages
+        shell: bash
+        working-directory: ${{ env.FEAST_REPO_PATH }}
+        run: |
+          pip install -r requirements.txt
 
       - name: Apply Feast Feature Definitions
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
         run: |
-          conda run -n churn_mlops feast apply
+          conda run -n mlops_data feast apply
 
       - name: Materialize Feast Features
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
         run: |
-          conda run -n churn_mlops feast materialize-incremental $(date -u +"%Y-%m-%dT%H:%M:%S")
-
+          conda run -n mlops_data feast materialize-incremental $(date -u +"%Y-%m-%dT%H:%M:%S")
 
   training:
     runs-on: [self-hosted, linux]
@@ -48,17 +58,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test activate conda environment
-        shell: bash 
+      - name: Create conda environment if it doesn't exist
+        shell: bash
         run: |
-          source /home/mlops/miniconda3/bin/activate
-          conda activate mlops_2026
-
+          if ! conda info --envs | grep 'mlops_modeling'; then
+            echo "Conda environment does not exist. Creating..."
+            conda create -n mlops_modeling python=3.11 -y
+          fi
+      - name: Activate conda environment
+        shell: bash
+        run: |
+          conda activate mlops_modeling
+      
+      - name: Restore packages
+        shell: bash
+        working-directory: ${{ env.TRAINING_REPO_PATH }}
+        run: |
+          pip install -r requirements.txt
       - name: Run Training
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/train.sh | tee train.log
+          conda run -n mlops_modeling bash ./src/run_sh/train.sh | tee train.log
           RUN_ID=$(grep -oE 'runs/[a-f0-9]+' train.log | head -n1 | cut -d/ -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "MODEL_URI=runs:${RUN_ID}/xgboost_churn" >> $GITHUB_ENV
@@ -70,34 +91,34 @@ jobs:
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/eval.sh --run-id ${{ env.RUN_ID }} | tee eval.log
+          conda run -n mlops_modeling bash ./src/run_sh/eval.sh --run-id ${{ env.RUN_ID }} | tee eval.log
 
       - name: Run Registration
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/register.sh --run-id ${{ env.RUN_ID }} | tee register.log
+          conda run -n mlops_modeling bash ./src/run_sh/register.sh --run-id ${{ env.RUN_ID }} | tee register.log
 
       - name: Update Model Version Alias
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/set_model_alias.sh
+          conda run -n mlops_modeling bash ./src/run_sh/set_model_alias.sh
 
       - name: Promote to Champion
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/promote.sh
+          conda run -n mlops_modeling bash ./src/run_sh/promote.sh
 
-  serving: 
+  serving:
     runs-on: [self-hosted, linux]
     needs: training
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -121,7 +142,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6
@@ -138,4 +159,3 @@ jobs:
         working-directory: ${{ env.SERVING_REPO_PATH }}
         run: |
           docker compose up -d --force-recreate
-        
