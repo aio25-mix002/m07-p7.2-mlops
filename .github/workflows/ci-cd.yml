@@ -105,12 +105,14 @@ jobs:
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
           conda run -n mlops_modeling bash ./src/run_sh/register.sh register --config ./src/config/xgboost.yaml --run-id ${{ env.RUN_ID }} --model-name xgboost-model  | tee register.log
+          REGISTERED_VERSION=$(grep -oE 'version [0-9]+' register.log | tail -n1 | cut -d' ' -f2)
+          echo "REGISTERED_VERSION=$REGISTERED_VERSION" >> $GITHUB_ENV
 
       - name: Update Model Version Alias
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_modeling bash ./src/run_sh/set_model_alias.sh --config ./src/config/xgboost.yaml --model-name xgboost-model 
+          conda run -n mlops_modeling bash ./src/run_sh/set_model_alias.sh --config ./src/config/xgboost.yaml --model-name xgboost-model --version ${{ env.REGISTERED_VERSION }}
 
       - name: Promote to Champion
         shell: bash
