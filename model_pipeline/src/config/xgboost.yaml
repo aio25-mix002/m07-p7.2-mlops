@@ -1,6 +1,6 @@
 mlflow:
   tracking_uri: "http://localhost:5000"
-  experiment_name: "test_churn_prediction_v0.1"
+  experiment_name: "test_churn_prediction_xgboost_v0.1"
   artifact_location: "s3://mlflow/"
   registry_uri: "http://localhost:5000"
   tags:
