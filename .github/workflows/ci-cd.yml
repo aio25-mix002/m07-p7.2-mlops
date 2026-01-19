@@ -2,17 +2,16 @@ name: CICD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-
 
 env:
   REGISTRY: ghcr.io
-  REF_REPO: thuannan/aio2025-mlops-project01
+  REF_REPO: ${{ github.repository }}
   DOCKER_BUILDKIT: 1
-  FEAST_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/data-pipeline/churn_feature_store/churn_features/feature_repo
-  TRAINING_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/model_pipeline
-  SERVING_REPO_PATH: /home/mlops/Repository/aio2025-mlops-project01/serving_pipeline
+  FEAST_REPO_PATH: ./data-pipeline/churn_feature_store/churn_features/feature_repo
+  TRAINING_REPO_PATH: ./model_pipeline
+  SERVING_REPO_PATH: ./serving_pipeline
 
 jobs:
   feast:
@@ -22,24 +21,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test activate conda environment
-        shell: bash
-        run: |
-          source /home/mlops/miniconda3/bin/activate
-          conda activate churn_mlops
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: 3.11
+          auto-activate: true
+          activate-environment: mlops_data
 
+      - name: Restore packages
+        shell: bash
+        working-directory: ./data-pipeline
+        run: |
+          conda run -n mlops_data pip install -r requirements.txt
+      - name: Restore files via DVC
+        shell: bash
+        working-directory: ./data-pipeline
+        run: |
+          conda run -n mlops_data dvc pull
       - name: Apply Feast Feature Definitions
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
         run: |
-          conda run -n churn_mlops feast apply
+          conda run -n mlops_data feast apply
 
       - name: Materialize Feast Features
         shell: bash
         working-directory: ${{ env.FEAST_REPO_PATH }}
         run: |
-          conda run -n churn_mlops feast materialize-incremental $(date -u +"%Y-%m-%dT%H:%M:%S")
-
+          conda run -n mlops_data feast materialize-incremental $(date -u +"%Y-%m-%dT%H:%M:%S")
 
   training:
     runs-on: [self-hosted, linux]
@@ -48,17 +58,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test activate conda environment
-        shell: bash 
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: 3.11
+          auto-activate: true
+          activate-environment: mlops_modeling
+      
+      - name: Setup S3 credentials
         run: |
-          source /home/mlops/miniconda3/bin/activate
-          conda activate mlops_2026
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "MLFLOW_S3_ENDPOINT_URL=${{ vars.AWS_ENDPOINT_URL_S3 }}" >> $GITHUB_ENV
 
+      - name: Restore packages
+        shell: bash
+        working-directory: ./model_pipeline
+        run: |
+          conda run -n mlops_modeling pip install -r requirements.txt
+      - name: Restore files via DVC
+        shell: bash
+        working-directory: ./data-pipeline
+        run: |
+          conda run -n mlops_data dvc pull
       - name: Run Training
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/train.sh | tee train.log
+          conda run -n mlops_modeling bash ./src/run_sh/train.sh --config ./src/config/xgboost.yaml | tee train.log
           RUN_ID=$(grep -oE 'runs/[a-f0-9]+' train.log | head -n1 | cut -d/ -f2)
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "MODEL_URI=runs:${RUN_ID}/xgboost_churn" >> $GITHUB_ENV
@@ -70,34 +98,36 @@ jobs:
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/eval.sh --run-id ${{ env.RUN_ID }} | tee eval.log
+          conda run -n mlops_modeling bash ./src/run_sh/eval.sh --config ./src/config/xgboost.yaml --run-id ${{ env.RUN_ID }} | tee eval.log
 
       - name: Run Registration
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/register.sh --run-id ${{ env.RUN_ID }} | tee register.log
+          conda run -n mlops_modeling bash ./src/run_sh/register.sh register --config ./src/config/xgboost.yaml --run-id ${{ env.RUN_ID }} --model-name xgboost-model  | tee register.log
+          REGISTERED_VERSION=$(grep -oE 'version [0-9]+' register.log | tail -n1 | cut -d' ' -f2)
+          echo "REGISTERED_VERSION=$REGISTERED_VERSION" >> $GITHUB_ENV
 
       - name: Update Model Version Alias
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/set_model_alias.sh
+          conda run -n mlops_modeling bash ./src/run_sh/set_model_alias.sh --config ./src/config/xgboost.yaml --model-name xgboost-model --version ${{ env.REGISTERED_VERSION }}
 
       - name: Promote to Champion
         shell: bash
         working-directory: ${{ env.TRAINING_REPO_PATH }}
         run: |
-          conda run -n mlops_2026 bash ./src/run_sh/promote.sh
+          conda run -n mlops_modeling bash ./src/run_sh/promote.sh --config ./src/config/xgboost.yaml --model-name xgboost-model
 
-  serving: 
+  serving:
     runs-on: [self-hosted, linux]
     needs: training
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -121,7 +151,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6
@@ -138,4 +168,3 @@ jobs:
         working-directory: ${{ env.SERVING_REPO_PATH }}
         run: |
           docker compose up -d --force-recreate
-        

@@ -3,10 +3,6 @@ Docstring for model_pipelinenene.src.scripts.eval
 """
 import sys
 from pathlib import Path
-
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
 import argparse
 import pandas as pd
 from loguru import logger
@@ -43,13 +39,9 @@ def save_predictions_with_probabilities(
     model = mlflow.pyfunc.load_model(model_uri)
     
     feature_cols = [col for col in eval_data.columns if col != target_col]
-    X_eval = eval_data[feature_cols].copy()
+    X_eval = eval_data[feature_cols]
     y_true = eval_data[target_col]
-
-    ## Convert integer columns to float to match MLflow model schema
-    int_cols = X_eval.select_dtypes(include=['int64', 'int32']).columns
-    X_eval[int_cols] = X_eval[int_cols].astype('float64')
-
+    
     logger.info(f"Generating predictions for {len(X_eval)} samples...")
     
     
@@ -188,10 +180,7 @@ def main():
 
     eval_data = eval_data[feature_cols + [target_col]]
 
-    ## Convert integer columns to float to match MLflow model schema
-    int_cols = eval_data.select_dtypes(include=['int64', 'int32']).columns
-    eval_data[int_cols] = eval_data[int_cols].astype('float64')
-
+    
     evaluator = ModelEvaluator(
         config=config.get("evaluation", {}),
         experiment_tracker=tracker,
@@ -220,8 +209,7 @@ def main():
             model_uri=model_uri,
             eval_data=eval_data,
             target_col=target_col,
-            # model_type=config["model"]["model_type"],
-            model_type=config["model"].get("type", "classifier"),  # MLflow expects "classifier" or "regressor"
+            model_type=config["model"]["type"],
          
         )
 

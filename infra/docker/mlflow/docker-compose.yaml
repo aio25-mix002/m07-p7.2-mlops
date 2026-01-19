@@ -2,9 +2,9 @@ services:
   mysql:
     restart: always
     image: mysql/mysql-server:8.0
-    container_name: aio_mysql
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT}:3306"
     networks:
       - aio-network
     environment:
@@ -13,15 +13,15 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
 
   minio:
     restart: always
     image: minio/minio:latest
-    container_name: aio_minio
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
     networks:
       - aio-network
     command: server /data --console-address ':9001' --address ':9000'
@@ -29,17 +29,17 @@ services:
       - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
       - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
     volumes:
-      - ./minio_data:/data
+      - minio_data:/data
 
   mc:
     image: minio/mc:latest
     depends_on:
       - minio
-    container_name: aio_minio_mc
+    container_name: ${COMPOSE_PROJECT_NAME}-minio-mc
     networks:
       - aio-network
     env_file:
-      - .env
+      - .env.local
     entrypoint: >
       /bin/sh -c "
       /tmp/wait-for-it.sh minio:9000 &&
@@ -54,12 +54,12 @@ services:
     restart: always
     build: ./mlflow
     image: mlflow_server
-    container_name: mlflow_server
+    container_name: ${COMPOSE_PROJECT_NAME}-server
     depends_on:
       - mysql
       - minio
     ports:
-      - "5000:5000"
+      - "${MLFLOW_PORT}:5000"
     networks:
       - aio-network
     environment:
@@ -78,3 +78,7 @@ services:
 networks:
   aio-network:
     external: true
+
+volumes:
+  mysql_data:
+  minio_data:
